@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.23107.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EthornellEditor", "EthernelEditor\EthornellEditor.csproj", "{48B7C2A7-2C0E-4D8C-BA34-616C5B20C8D9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EEGUI", "EEGUI\EEGUI.csproj", "{7A6B12FB-8974-4E24-8E77-A685978610C0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{48B7C2A7-2C0E-4D8C-BA34-616C5B20C8D9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{48B7C2A7-2C0E-4D8C-BA34-616C5B20C8D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{48B7C2A7-2C0E-4D8C-BA34-616C5B20C8D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{48B7C2A7-2C0E-4D8C-BA34-616C5B20C8D9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7A6B12FB-8974-4E24-8E77-A685978610C0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7A6B12FB-8974-4E24-8E77-A685978610C0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7A6B12FB-8974-4E24-8E77-A685978610C0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7A6B12FB-8974-4E24-8E77-A685978610C0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
