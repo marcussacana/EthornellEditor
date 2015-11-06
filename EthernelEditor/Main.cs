@@ -8,15 +8,36 @@ namespace EthornellEditor
     public class BurikoScript
     {
         public string[] strings = new string[0];
+        public ScriptVersion Version { get; private set; }
         private StringEntry[] Strings = new StringEntry[0];
         private int StartTable = 0;
         private byte[] script;
+        private int HeaderSize = 0;
+        private object[] HeaderMask = new object[] { 0x42, 0x75, 0x72, 0x69, 0x6B, 0x6F, 0x43, 0x6F, 0x6D, 0x70, 0x69, 0x6C, 0x65, 0x64, 0x53, 0x63, 0x72, 0x69, 0x70, 0x74, 0x56, 0x65, 0x72, 0x31, 0x2E, null, null, 0x00 };
         public void import(byte[] Script)
         {
             script = Script;
             strings = new string[0];
             Strings = new StringEntry[0];
             StartTable = Script.Length;
+            HeaderSize = 0;
+            if (EqualAt(0, HeaderMask, Script))
+            {
+                Version = ScriptVersion.WithSig;
+                HeaderSize = HeaderMask.Length + getoffset(HeaderMask.Length);
+            }
+            else
+            {
+                if (EqualAt(0, new byte[] { 0x42, 0x53, 0x45, 0x20, 0x31, 0x2E, 0x30 }, Script))
+                {
+                    Version = ScriptVersion.BSE;
+                    throw new Exception("Sorry this tool don't support the BSE encryption of the BGI\n\nIf you know how to decrypt plz add-me on skype: live:ddtank.marcus");
+                }
+                else
+                {
+                    Version = ScriptVersion.Native;
+                }
+            }
             bool finding = false;
             int Size = 0;
             for (int pointer = 0; pointer < StartTable; pointer++)
@@ -32,7 +53,7 @@ namespace EthornellEditor
                 {
                     pointer += 4;
                     if (StartTable == Script.Length)
-                        StartTable = Tools.ByteArrayToInt(new byte[] { Script[pointer + 3], Script[pointer + 2], Script[pointer + 1], Script[pointer] });
+                        StartTable = Tools.ByteArrayToInt(new byte[] { Script[pointer + 3], Script[pointer + 2], Script[pointer + 1], Script[pointer] }) + HeaderSize;
                     Size = 0;
                     finding = true;
                     continue;
@@ -44,6 +65,7 @@ namespace EthornellEditor
                     extraString:;
                         pointer += 4;
                         int offset = Tools.ByteArrayToInt(new byte[] { Script[pointer + 3], Script[pointer + 2], Script[pointer + 1], Script[pointer] });
+                        offset += HeaderSize;
                         if (offset > Script.Length || offset < StartTable)
                         {
                             pointer -= 4;
@@ -88,7 +110,7 @@ namespace EthornellEditor
             {
                 for (int pos = 0; pos < Strings.Length; pos++)
                 {
-                    int pointer = getoffset(Strings[pos].OffsetPos);
+                    int pointer = getoffset(Strings[pos].OffsetPos)+HeaderSize;
                     while (outfile[pointer] != 0x00)
                     {
                         outfile[pointer] = 0x00;
@@ -102,7 +124,7 @@ namespace EthornellEditor
             if (haveSig)
             {
                 //step 3.1 - Detect Start Of StringTable
-                for (int pos = script.Length - EditorSignature.Length; pos > 0; pos--)
+                for (int pos = script.Length - EditorSignature.Length - HeaderMask.Length; pos > 0; pos--)
                 {
                     if (EqualAt(pos, EditorSignature, script))
                     {
@@ -135,7 +157,7 @@ namespace EthornellEditor
             object[] offsets = new object[] { new int[0], new int[0] };
             for (int pos = 0; pos < strings.Length; pos++)
             {
-                int Offset = (TableStart + EditorSignature.Length - 1) + StringTable.Length;  
+                int Offset = (TableStart + EditorSignature.Length - 1) + StringTable.Length;
                 int OffsetPos = Strings[pos].OffsetPos;
                 string[] hexs = Tools.SJStringToHex(strings[pos].Replace("\\n", "\n"));
                 string hex = "";
@@ -155,6 +177,7 @@ namespace EthornellEditor
                 OffPos = tmp;
                 tmp = new int[Offsets.Length+1];
                 Offsets.CopyTo(tmp, 0);
+                Offset -= HeaderSize;
                 tmp[Offsets.Length] = Offset;
                 Offsets = tmp;
                 offsets = new object[] { OffPos, Offsets };                
@@ -296,6 +319,19 @@ namespace EthornellEditor
                     return false;
             return true;
         }
+        private bool EqualAt(int offset, object[] check, byte[] script)
+        {
+            for (int index = 0; index < check.Length; index++)
+                if (check[index] is byte || check[index] is int)
+                    if ((byte)(int)check[index] != script[index + offset])
+                        return false;
+            return true;
+        }
+        public enum ScriptVersion { Native, WithSig,
+            /// <summary>
+            /// Don't supported, if you know how the encryption works, plz, contact-me in skype: live:ddtank.marcus
+            /// </summary>
+            BSE }
     }
     class StringEntry {
         public int OffsetPos = 0;

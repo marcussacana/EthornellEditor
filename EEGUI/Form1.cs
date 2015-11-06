@@ -15,7 +15,7 @@ namespace EEGUI
         public Form1()
         {
             InitializeComponent();
-            MessageBox.Show("This don't is a stable translation tool, this program is a Demo for my dll, the \"EthornellEditor.dll\" it's a opensoruce project to allow you make your program to edit any v1 BGI engine script, without sig.\n\nHow to use:\n*Rigth Click in the window to open or save the file\n*Select the string in listbox and edit in the text box\n*Press enter to update the string\n\nThis program is unstable!");
+            MessageBox.Show("This don't is a stable translation tool, this program is a Demo for my dll, the \"EthornellEditor.dll\" it's a opensoruce project to allow you make your program to edit any v1 BGI engine script, and don't support BSE scripts.\n\nHow to use:\n*Rigth Click in the window to open or save the file\n*Select the string in listbox and edit in the text box\n*Press enter to update the string\n\nThis program is unstable!");
         }
         public BurikoScript script = new BurikoScript();
         private void openFileToolStripMenuItem_Click(object sender, EventArgs e)
