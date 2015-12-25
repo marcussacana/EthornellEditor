@@ -20,6 +20,8 @@ namespace EthornellEditor
             strings = new string[0];
             Strings = new StringEntry[0];
             StartTable = Script.Length;
+            while (!EqualAt(StartTable - 3, new byte[] { 0x00, 0x00, 0x00 }, script))
+                StartTable--;
             HeaderSize = 0;
             if (EqualAt(0, HeaderMask, Script))
             {
@@ -51,9 +53,7 @@ namespace EthornellEditor
                 }
                 if (EqualAt(pointer, new byte[] { 0x7F, 0x00, 0x00, 0x00 }, Script) && !finding)
                 {
-                    pointer += 4;
-                    if (StartTable == Script.Length)
-                        StartTable = Tools.ByteArrayToInt(new byte[] { Script[pointer + 3], Script[pointer + 2], Script[pointer + 1], Script[pointer] }) + HeaderSize;
+                    pointer += 4;                    
                     Size = 0;
                     finding = true;
                     continue;
@@ -94,15 +94,17 @@ namespace EthornellEditor
                             goto extraString;
                         }
                     }
+                    else
+                        Size++;
                 }
-                else
-                    Size++;
             }
         }
         //EditorSignature = 00 Edited With EthornellEditor 00 - This need to the program know if all strings is orderned at end of the script
         private byte[] EditorSignature = new byte[] { 0x00, 0x45, 0x64, 0x69, 0x74, 0x65, 0x64, 0x20, 0x57, 0x69, 0x74, 0x68, 0x20, 0x45, 0x74, 0x68, 0x6F, 0x72, 0x6E, 0x65, 0x6C, 0x6C, 0x45, 0x64, 0x69, 0x74, 0x6F, 0x72, 0x00 };
         public byte[] export() //maked with a prevent of strings without call order
         {
+            if (script.Length == 0)
+                throw new Exception("You need import before export.");
             bool haveSig = EndsWith(script, EditorSignature);
             byte[] outfile = script;
             //step 1 - Null all strings data
