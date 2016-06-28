@@ -112,25 +112,12 @@ namespace EthornellEditor
                 throw new Exception("You need import before export.");
             bool haveSig = EndsWith(script, EditorSignature);
             byte[] outfile = script;
-            //step 1 - Null all strings data
-            if (!haveSig)
-            {
-                for (int pos = 0; pos < Strings.Length; pos++)
-                {
-                    int pointer = getoffset(Strings[pos].OffsetPos)+HeaderSize;
-                    while (outfile[pointer] != 0x00)
-                    {
-                        outfile[pointer] = 0x00;
-                        pointer++;
-                    }
-                }
-            }
-            //step 2 - Detect correct StringTable injection method
-
+            //step 1 - Detect correct StringTable injection method
+        
             int TableStart = 0;
             if (haveSig)
             {
-                //step 3.1 - Detect Start Of StringTable
+                //step 2.1 - Detect Start Of StringTable
                 for (int pos = script.Length - EditorSignature.Length - HeaderMask.Length; pos > 0; pos--)
                 {
                     if (EqualAt(pos, EditorSignature))
@@ -151,7 +138,7 @@ namespace EthornellEditor
             }
             else
             {
-                //step 3.2 - Set the new Start of StringTable
+                //step 2.2 - Set the new Start of StringTable
                 TableStart = script.Length - 1;
                 while (outfile[TableStart] == 0x00)
                 {
@@ -159,12 +146,12 @@ namespace EthornellEditor
                 }
                 TableStart += 2; //ajust cut pointer
             }
-            //step 4 - Generate new string table
+            //step 3 - Generate new string table
             byte[] StringTable = new byte[0];
             object[] offsets = new object[] { new int[0], new int[0] };
             for (int pos = 0; pos < strings.Length; pos++)
             {
-                int Offset = (TableStart + EditorSignature.Length - 1) + StringTable.Length;
+                int Offset = (TableStart + EditorSignature.Length) + StringTable.Length;
                 int OffsetPos = Strings[pos].OffsetPos;
                 byte[] newstring = SJISBASE.GetBytes(strings[pos].Replace("\\n", "\n") + "\x0");
                 StringTable = insertArr(StringTable, newstring);

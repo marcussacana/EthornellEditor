@@ -27,7 +27,7 @@ namespace EEGUI
             if (dr == DialogResult.OK)
             {
                 listBox1.Items.Clear();
-                script.import(System.IO.File.ReadAllBytes(ofd.FileName));
+                script.Import(System.IO.File.ReadAllBytes(ofd.FileName));
                 foreach (string str in script.strings)
                 {
                     listBox1.Items.Add(str);
@@ -60,14 +60,13 @@ namespace EEGUI
 
         private void saveFileToolStripMenuItem_Click(object sender, EventArgs e)
         {
-
             SaveFileDialog sfd = new SaveFileDialog();
             sfd.Filter = "All Files | *.*";
             sfd.Title = "Save a Ethornel Buriko General Interpreter Script File";
             DialogResult dr = sfd.ShowDialog();
             if (dr == DialogResult.OK)
             {
-                System.IO.File.WriteAllBytes(sfd.FileName, script.export());
+                System.IO.File.WriteAllBytes(sfd.FileName, script.Export());
             }
         }
     }
