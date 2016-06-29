@@ -12,6 +12,11 @@ namespace EthornellEditor
 
         public Encoding SJISBASE = Encoding.GetEncoding(932);
 
+        /// <summary>
+        /// Alternative offset detection method, if enable, found more results in the script, if disable show only default string entry
+        /// </summary>
+        public bool CompatibilityMode = true;
+
         private StringEntry[] Strings = new StringEntry[0];
         private int StartTable = 0;
         private byte[] script;
@@ -58,12 +63,16 @@ namespace EthornellEditor
                 }
                 if (EqualAt(pointer, new byte[] { 0x7F, 0x00, 0x00, 0x00 }) && !finding)
                 {
-                    pointer += 4;                    
+                    if (!CompatibilityMode) {
+                        int offset = getoffset(pointer + 4);
+                        if (offset > 0 && offset < script.Length)
+                            StartTable = HeaderSize + offset;
+                    }
                     Size = 0;
                     finding = true;
                     continue;
                 }
-                if (finding)
+                if (finding || !CompatibilityMode)
                 {
                     if (EqualAt(pointer, new byte[] { 0x03, 0x00, 0x00, 0x00 }))
                     {
@@ -112,77 +121,80 @@ namespace EthornellEditor
                 throw new Exception("You need import before export.");
             bool haveSig = EndsWith(script, EditorSignature);
             byte[] outfile = script;
-            //step 1 - Detect correct StringTable injection method
-        
-            int TableStart = 0;
+            //step 1 - Null all strings data
+             if (!haveSig)
+             {
+                 for (int pos = 0; pos < Strings.Length; pos++)
+                 {
+                     int pointer = getoffset(Strings[pos].OffsetPos)+HeaderSize;
+                     while (outfile[pointer] != 0x00)
+                         outfile[pointer++] = 0x00;
+                 }
+             }
+ 
+            //step 2 - Detect correct StringTable injection method
+            int StringTableStart = 0;
+            int DumpLen = 0;
             if (haveSig)
             {
-                //step 2.1 - Detect Start Of StringTable
-                for (int pos = script.Length - EditorSignature.Length - HeaderMask.Length; pos > 0; pos--)
-                {
+                //step 3-1 - Detect Start Of StringTable
+                for (int pos = script.Length - EditorSignature.Length - 1; pos > 0; pos--)
                     if (EqualAt(pos, EditorSignature))
                     {
-                        TableStart = pos;
+                        StringTableStart = pos;
                         break;
                     }
-                }
-                if (TableStart == 0)
-                {
+                if (StringTableStart == 0)
                     throw new Exception("Corrupted Script");
-                }
-                while (script[TableStart] == 0x00)
-                {
-                    TableStart--;
-                }
-                TableStart += 2; //ajust cut pointer
+
+                DumpLen = StringTableStart + 1;//ajust cut pointer
             }
-            else
-            {
-                //step 2.2 - Set the new Start of StringTable
-                TableStart = script.Length - 1;
-                while (outfile[TableStart] == 0x00)
+            else {
+                //step 3-2 - Set the new Start of StringTable
+                StringTableStart = script.Length - 1;
+                while (outfile[StringTableStart] == 0x00)
                 {
-                    TableStart--;
+                    StringTableStart--;
                 }
-                TableStart += 2; //ajust cut pointer
+                StringTableStart += 2; 
+                DumpLen = StringTableStart + 1;//ajust cut pointer
             }
-            //step 3 - Generate new string table
+
+            //step 4 - Generate new string table and calculate new offsets
             byte[] StringTable = new byte[0];
-            object[] offsets = new object[] { new int[0], new int[0] };
-            for (int pos = 0; pos < strings.Length; pos++)
-            {
-                int Offset = (TableStart + EditorSignature.Length) + StringTable.Length;
-                int OffsetPos = Strings[pos].OffsetPos;
-                byte[] newstring = SJISBASE.GetBytes(strings[pos].Replace("\\n", "\n") + "\x0");
-                StringTable = insertArr(StringTable, newstring);
-                int[] OffPos = (int[])offsets[0];
-                int[] Offsets = (int[])offsets[1];
-                int[] tmp = new int[OffPos.Length + 1];
-                OffPos.CopyTo(tmp, 0);
-                tmp[OffPos.Length] = OffsetPos;
-                OffPos = tmp;
-                tmp = new int[Offsets.Length+1];
-                Offsets.CopyTo(tmp, 0);
-                Offset -= HeaderSize;
-                tmp[Offsets.Length] = Offset;
-                Offsets = tmp;
-                offsets = new object[] { OffPos, Offsets };                
+            int[] offsets = new int[Strings.Length];
+            for (int pos = 0; pos < strings.Length; pos++) {
+                int ID = -1;
+                int Offset;
+
+                for (int i = 0; i < pos; i++)
+                    if (Strings[pos].content == Strings[i].content) {
+                        ID = i;
+                        break;
+                    }
+
+                if (ID == -1) {
+                    Offset = (StringTableStart + EditorSignature.Length + StringTable.Length) - HeaderSize;
+                    insertArr(ref StringTable, SJISBASE.GetBytes(strings[pos].Replace("\\n", "\n") + "\x0"));
+                } else {
+                    Offset = offsets[ID];
+                }
+
+                offsets[pos] = Offset;
             }
             
             //step 5 - Generate new script
-            outfile = cutFile(outfile, TableStart);
-            StringTable = insertArr(EditorSignature, StringTable);
-            StringTable = insertArr(StringTable, EditorSignature);
-            byte[] temp = new byte[outfile.Length + StringTable.Length];
-            outfile.CopyTo(temp, 0);
-            StringTable.CopyTo(temp, outfile.Length);
-            outfile = temp;
+            outfile = cutFile(outfile, DumpLen);
+            insertArr(ref outfile, EditorSignature);
+            insertArr(ref outfile, StringTable);
+            insertArr(ref outfile, EditorSignature);
+
             //step 6 - Update offsets
-            for(int pos = 0; pos <  ((int[])offsets[0]).Length; pos++)
+            for(int pos = 0; pos <  offsets.Length; pos++)
             {
-                int offsetPos = ((int[])offsets[0])[pos];
-                int offset = ((int[])offsets[1])[pos];
-                outfile = writeOffset(outfile, genOffet(offset), offsetPos);
+                int offsetPos = Strings[pos].OffsetPos;
+                int offset = offsets[pos];
+                overwriteBytes(ref outfile, genOffet(offset), offsetPos);
             }
             return outfile;
         }
@@ -216,13 +228,10 @@ namespace EthornellEditor
             }
             return true;
         }
-        private byte[] writeOffset(byte[] File, byte[] offset, int offsetPos)
+        private void overwriteBytes(ref byte[] File, byte[] bytes, int Pos)
         {
-            for (int pos = 0; pos < offset.Length; pos++)
-            {
-                File[offsetPos + pos] = offset[pos];
-            }
-            return File;
+            for (int pos = 0; pos < bytes.Length; pos++)
+                File[Pos + pos] = bytes[pos];
         }
 
         private byte[] genOffet(int offset)
@@ -234,17 +243,12 @@ namespace EthornellEditor
 
         }
 
-        private byte[] insertArr(byte[] original, byte[] ArryToAppend)
+        private void insertArr(ref byte[] original, byte[] ArryToAppend)
         {
-            byte[] result = original;
-            foreach (byte bt in ArryToAppend)
-            {
-                byte[] temp = new byte[result.Length+1];
-                result.CopyTo(temp, 0);
-                temp[result.Length] = bt;
-                result = temp;
-            }
-            return result;
+            byte[] result = new byte[original.Length + ArryToAppend.Length];
+            Array.Copy(original, 0, result, 0, original.Length);
+            Array.Copy(ArryToAppend, 0, result, original.Length, ArryToAppend.Length);
+            original = result;
         }
 
         private object[] haveStringAt(int pos, int[] offsets)

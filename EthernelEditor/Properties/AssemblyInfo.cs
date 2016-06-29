@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("EthornellEditor")]
-[assembly: AssemblyDescription("Ehornell Script Editor")]
+[assembly: AssemblyTitle("EthornellEditor - Burigo General Interpeter Script Manager")]
+[assembly: AssemblyDescription("Ethornell Script Editor")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("VNX+")]
 [assembly: AssemblyProduct("EthornellEditor")]
-[assembly: AssemblyCopyright("Copyright © VNX+ 2015")]
+[assembly: AssemblyCopyright("Copyright © VNX+ 2015-2016")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -33,4 +33,4 @@ using System.Runtime.InteropServices;
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
 [assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.3.180.0620")]
+[assembly: AssemblyFileVersion("2.49.181.0046")]
