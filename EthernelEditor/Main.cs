@@ -1,4 +1,5 @@
-﻿using System;
+﻿#define Filter
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,13 +18,13 @@ namespace EthornellEditor {
 
         private StringEntry[] Strings = new StringEntry[0];
         private int StartTable = 0;
-        private byte[] script;
+        private byte[] Script;
         private int HeaderSize = 0;
 
         private object[] HeaderMask = new object[]
         { 0x42, 0x75, 0x72, 0x69, 0x6B, 0x6F, 0x43, 0x6F, 0x6D, 0x70, 0x69, 0x6C, 0x65, 0x64, 0x53, 0x63, 0x72, 0x69, 0x70, 0x74, 0x56, 0x65, 0x72, 0x31, 0x2E, null, null, 0x00 };
         public string[] Import(byte[] Script) {
-            script = Script;
+            this.Script = Script;
             strings = new string[0];
             Strings = new StringEntry[0];
             StartTable = Script.Length;
@@ -32,15 +33,16 @@ namespace EthornellEditor {
             HeaderSize = 0;
             if (EqualAt(0, HeaderMask)) {
                 Version = ScriptVersion.WithSig;
-                HeaderSize = HeaderMask.Length + getoffset(HeaderMask.Length);
+                HeaderSize = HeaderMask.Length + Getoffset(HeaderMask.Length);
             } else {
                 if (EqualAt(0, new byte[] { 0x42, 0x53, 0x45, 0x20, 0x31, 0x2E, 0x30 })) {
                     Version = ScriptVersion.BSE;
-                    throw new Exception("Sorry this tool don't support the BSE encryption of the BGI\n\nIf you know how to decrypt plz add-me on skype: live:ddtank.marcus");
+                    throw new Exception("Sorry this tool don't support the BSE encryption of the BGI");
                 } else {
                     Version = ScriptVersion.Native;
                 }
             }
+#if OLDMETHOD
             bool finding = false;
             int Size = 0;
             for (int i = 0; i < StartTable; i++) {
@@ -52,7 +54,7 @@ namespace EthornellEditor {
                 }
                 if (EqualAt(i, new byte[] { 0x7F, 0x00, 0x00, 0x00 }) && !finding) {
                     if (!CompatibilityMode) {
-                        int offset = getoffset(i + 4);
+                        int offset = Getoffset(i + 4);
                         if (offset > 0 && offset < script.Length)
                             StartTable = HeaderSize + offset;
                     }
@@ -64,7 +66,7 @@ namespace EthornellEditor {
                     if (EqualAt(i, new byte[] { 0x03, 0x00, 0x00, 0x00 })) {
                         extraString:;
                         i += 4;
-                        int offset = getoffset(i);
+                        int offset = Getoffset(i);
                         offset += HeaderSize;
                         if (offset > Script.Length || offset < StartTable) {
                             i -= 4;
@@ -72,7 +74,7 @@ namespace EthornellEditor {
                             continue;
                         }
                         finding = false;
-                        StringEntry rst = getString(offset);
+                        StringEntry rst = GetString(offset);
                         string str = rst.Content;
                         int length = rst.Size;
                         AppendArray(ref strings, str);
@@ -90,8 +92,41 @@ namespace EthornellEditor {
                         Size++;
                 }
             }
+#else
+            for (int i = 0; i < StartTable; i += 4) {
+                if (EqualAt(i, new byte[] { 0x03, 0x00, 0x00, 0x00 })) {
+                    i += 4;
+                    int Offset = Getoffset(i);
+                    Offset += HeaderSize;
+                    bool Ignore = false;
+                    Ignore |= (from x in Strings where x.OffsetPos == i select x).Count() != 0;
+                    Ignore |= Offset >= Script.Length;
+                    Ignore |= Offset < StartTable;
+                    Ignore |= Script[i - 1] != 0x00;
+                    if (Ignore) {
+                        i -= 4;
+                        continue;
+                    }
+                       
+                    StringEntry Rst = GetString(Offset);
+                    string Str = Rst.Content;
 
-            return strings;
+#if Filter
+                    Ignore |= Str.EndsWith(".bs5") && Str[1] == ':';
+                    if (Ignore) {
+                        i -= 4;
+                        continue;
+                    }
+#endif
+                    AppendArray(ref strings, Str);
+                    AppendArray(ref Strings, new StringEntry() {
+                        Content = Str,
+                        OffsetPos = i
+                    });
+                }
+            }
+#endif
+                    return strings;
         }
 
         public void AppendArray<T>(ref T[] Array, T Value) {
@@ -109,16 +144,15 @@ namespace EthornellEditor {
             return Export();
         }
 
-        public byte[] Export() //maked with a prevent of strings without call order
-        {
-            if (script.Length == 0)
+        public byte[] Export() {
+            if (Script.Length == 0)
                 throw new Exception("You need import before export.");
-            bool haveSig = EndsWith(script, EditorSignature);
-            byte[] outfile = script;
+            bool haveSig = EndsWith(Script, EditorSignature);
+            byte[] outfile = Script;
             //step 1 - Null all strings data
             if (!haveSig) {
                 for (int pos = 0; pos < Strings.Length; pos++) {
-                    int pointer = getoffset(Strings[pos].OffsetPos) + HeaderSize;
+                    int pointer = Getoffset(Strings[pos].OffsetPos) + HeaderSize;
                     while (outfile[pointer] != 0x00)
                         outfile[pointer++] = 0x00;
                 }
@@ -129,7 +163,7 @@ namespace EthornellEditor {
             int DumpLen = 0;
             if (haveSig) {
                 //step 3-1 - Detect Start Of StringTable
-                for (int pos = script.Length - EditorSignature.Length - 1; pos > 0; pos--)
+                for (int pos = Script.Length - EditorSignature.Length - 1; pos > 0; pos--)
                     if (EqualAt(pos, EditorSignature)) {
                         StringTableStart = pos;
                         break;
@@ -140,7 +174,7 @@ namespace EthornellEditor {
                 DumpLen = StringTableStart + 1;//ajust cut pointer
             } else {
                 //step 3-2 - Set the new Start of StringTable
-                StringTableStart = script.Length - 1;
+                StringTableStart = Script.Length - 1;
                 while (outfile[StringTableStart] == 0x00) {
                     StringTableStart--;
                 }
@@ -240,46 +274,45 @@ namespace EthornellEditor {
             return new object[] { false, 0, 0 };
         }
 
-        private int getoffset(int pos) {
+        private int Getoffset(int pos) {
             byte[] off = new byte[4];
-            off[0] = script[pos]; off[1] = script[pos + 1]; off[2] = script[pos + 2]; off[3] = script[pos + 3];
+            off[0] = Script[pos]; off[1] = Script[pos + 1]; off[2] = Script[pos + 2]; off[3] = Script[pos + 3];
             if (!BitConverter.IsLittleEndian)
                 Array.Reverse(off);
             return BitConverter.ToInt32(off, 0);
         }
 
-        private StringEntry getString(int offset) {
+        private StringEntry GetString(int offset) {
             int ps = offset;
-            while (script[ps] != 0x00)
+            while (Script[ps] != 0x00)
                 ps++;
             int len = ps - offset;
             ps = 0;
             byte[] str = new byte[len];
             while (ps < len) {
-                str[ps] = script[offset + ps];
+                str[ps] = Script[offset + ps];
                 ps++;
             }
             return new StringEntry() {
                 OffsetPos = offset,
-                Size = len,
                 Content = SJISBASE.GetString(str)
             };
         }
 
         private bool EqualAt(int At, byte[] Check) {
-            if (Check.Length + At >= script.Length)
+            if (Check.Length + At >= Script.Length)
                 return false;
             for (int i = 0; i < Check.Length; i++)
-                if (Check[i] != script[i + At])
+                if (Check[i] != Script[i + At])
                     return false;
             return true;
         }
         private bool EqualAt(int At, object[] Check) {
-            if (Check.Length + At >= script.Length)
+            if (Check.Length + At >= Script.Length)
                 return false;
             for (int i = 0; i < Check.Length; i++)
                 if (Check[i] is byte || Check[i] is int)
-                    if ((byte)(int)Check[i] != script[i + At])
+                    if ((byte)(int)Check[i] != Script[i + At])
                         return false;
             return true;
         }
@@ -293,7 +326,6 @@ namespace EthornellEditor {
     }
     struct StringEntry {
         public int OffsetPos;
-        public int Size;
         public string Content;
     }
 }
