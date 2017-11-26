@@ -93,8 +93,13 @@ namespace EthornellEditor {
                 }
             }
 #else
-            for (int i = 0; i < StartTable; i += 4) {
-                if (EqualAt(i, new byte[] { 0x03, 0x00, 0x00, 0x00 })) {
+#if SAFE //Better Enabled but don't works with old games.
+            for (int i = 0; i < StartTable; i+= 4) {
+                if ((Script[i] == 0x03 || Script[i] == 0x01) && EqualAt(i + 1, new byte[] { 0x00, 0x00, 0x00 })) {
+#else
+            for (int i = 0; i < StartTable; i++) {
+                if ((Script[i] == 0x03 || Script[i] == 0x01) && EqualAt(i + 1, new byte[] { 0x00, 0x00, 0x00 })) {
+#endif
                     i += 4;
                     int Offset = Getoffset(i);
                     Offset += HeaderSize;
@@ -126,7 +131,7 @@ namespace EthornellEditor {
                 }
             }
 #endif
-                    return strings;
+            return strings;
         }
 
         public void AppendArray<T>(ref T[] Array, T Value) {
