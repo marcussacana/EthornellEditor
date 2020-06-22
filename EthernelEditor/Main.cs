@@ -1,4 +1,5 @@
 ﻿#define Filter
+//#define OLDMETHOD
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,8 +9,6 @@ namespace EthornellEditor {
     public class BurikoScript {
         public string[] strings = new string[0];
         public ScriptVersion Version { get; private set; }
-
-        public Encoding SJISBASE = Encoding.GetEncoding(932);
 
         /// <summary>
         /// Alternative offset detection method, if enable, found more results in the script, if disable show only default string entry
@@ -55,7 +54,7 @@ namespace EthornellEditor {
                 if (EqualAt(i, new byte[] { 0x7F, 0x00, 0x00, 0x00 }) && !finding) {
                     if (!CompatibilityMode) {
                         int offset = Getoffset(i + 4);
-                        if (offset > 0 && offset < script.Length)
+                        if (offset > 0 && offset < Script.Length)
                             StartTable = HeaderSize + offset;
                     }
                     Size = 0;
@@ -76,12 +75,10 @@ namespace EthornellEditor {
                         finding = false;
                         StringEntry rst = GetString(offset);
                         string str = rst.Content;
-                        int length = rst.Size;
                         AppendArray(ref strings, str);
                         AppendArray(ref Strings, new StringEntry() {
                             Content = str,
-                            OffsetPos = i,
-                            Size = length
+                            OffsetPos = i
                         });
                         if (EqualAt(i + 4, new byte[] { 0x03, 0x00, 0x00, 0x00 }))//if have secondary STR
                         {
@@ -126,7 +123,8 @@ namespace EthornellEditor {
                     AppendArray(ref strings, Str);
                     AppendArray(ref Strings, new StringEntry() {
                         Content = Str,
-                        OffsetPos = i
+                        OffsetPos = i,
+                        Info = Rst.Info
                     });
                 }
             }
@@ -195,14 +193,15 @@ namespace EthornellEditor {
                 int Offset;
 
                 for (int i = 0; i < pos; i++)
-                    if (Strings[pos].Content == Strings[i].Content) {
+                    if (Strings[pos].Content == Strings[i].Content && EqualData(Strings[pos].Info.Prefix, Strings[i].Info.Prefix) && EqualData(Strings[pos].Info.Sufix, Strings[i].Info.Sufix)) {
                         ID = i;
                         break;
                     }
+                
 
                 if (ID == -1) {
                     Offset = (StringTableStart + EditorSignature.Length + StringTable.Length) - HeaderSize;
-                    insertArr(ref StringTable, SJISBASE.GetBytes(strings[pos].Replace("\\n", "\n") + "\x0"));
+                    insertArr(ref StringTable, BGIEncoding.Encode(strings[pos].Replace("\\n", "\n"), Strings[pos].Info));
                 } else {
                     Offset = offsets[ID];
                 }
@@ -298,9 +297,12 @@ namespace EthornellEditor {
                 str[ps] = Script[offset + ps];
                 ps++;
             }
+
+            var Content = BGIEncoding.Decode(str, out DataInfo Info);
             return new StringEntry() {
                 OffsetPos = offset,
-                Content = SJISBASE.GetString(str)
+                Content = Content,
+                Info = Info
             };
         }
 
@@ -310,6 +312,23 @@ namespace EthornellEditor {
             for (int i = 0; i < Check.Length; i++)
                 if (Check[i] != Script[i + At])
                     return false;
+            return true;
+        }
+        private bool EqualData(byte[] Arr1, byte[] Arr2)
+        {
+            if (Arr1 == null && Arr2 == null)
+                return true;
+
+            if (Arr1 == null || Arr2 == null)
+                return false;
+
+            if (Arr1.Length != Arr2.Length)
+                return false;
+
+            for (int i = 0; i < Arr1.Length; i++)
+                if (Arr1[i] != Arr2[i])
+                    return false;
+
             return true;
         }
         private bool EqualAt(int At, object[] Check) {
@@ -332,5 +351,6 @@ namespace EthornellEditor {
     struct StringEntry {
         public int OffsetPos;
         public string Content;
+        public DataInfo Info;
     }
 }
