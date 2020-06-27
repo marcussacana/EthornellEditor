@@ -104,7 +104,10 @@ namespace EthornellEditor {
                     Ignore |= (from x in Strings where x.OffsetPos == i select x).Count() != 0;
                     Ignore |= Offset >= Script.Length;
                     Ignore |= Offset < StartTable;
-                    Ignore |= Script[Offset - 1] != 0x00;
+                    
+                    if (!Ignore)
+                        Ignore |= Script[Offset - 1] != 0x00;
+                    
                     if (Ignore) {
                         i -= 4;
                         continue;
