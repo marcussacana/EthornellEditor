@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Net.Mime;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace EthornellEditor
@@ -18,7 +16,16 @@ namespace EthornellEditor
             List<byte> Buffer = new List<byte>();
             for (int i = 0; i < Data.Length; i++)
             {
+                bool IsLastByte = i + 1 >= Data.Length;
                 byte Byte = Data[i];
+
+                if (IsMultiByte(Byte) && !IsLastByte)
+                {
+                    Buffer.Add(Byte);
+                    Buffer.Add(Data[++i]);
+                    continue;
+                }
+
                 if (Byte == 0xF5)
                 {
                     int Reaming = Data.Length - i;
@@ -57,6 +64,8 @@ namespace EthornellEditor
 
             return Decoded;
         }
+
+        public static bool IsMultiByte(byte Byte) => (Byte > 0x80 && Byte < 0xA0) || ((Byte & 0xF0) == 0xE0);
 
         public static byte[] Encode(string Content, DataInfo DataInfo)
         {
