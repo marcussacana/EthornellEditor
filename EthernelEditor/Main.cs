@@ -1,4 +1,5 @@
 ﻿#define Filter
+#define KEEP_UNCHANGED
 //#define OLDMETHOD
 using System;
 using System.Collections.Generic;
@@ -8,6 +9,7 @@ using System.Text;
 namespace EthornellEditor {
     public class BurikoScript {
         public string[] strings = new string[0];
+        public string[] oriStrings = null;
         public ScriptVersion Version { get; private set; }
 
         /// <summary>
@@ -132,6 +134,7 @@ namespace EthornellEditor {
                 }
             }
 #endif
+            oriStrings = strings.ToArray();
             return strings;
         }
 
@@ -158,6 +161,11 @@ namespace EthornellEditor {
             //step 1 - Null all strings data
             if (!haveSig) {
                 for (int pos = 0; pos < Strings.Length; pos++) {
+#if KEEP_UNCHANGED
+                    if (oriStrings[pos] == strings[pos])
+                        continue;
+#endif
+
                     int pointer = Getoffset(Strings[pos].OffsetPos) + HeaderSize;
                     while (outfile[pointer] != 0x00)
                         outfile[pointer++] = 0x00;
@@ -192,6 +200,11 @@ namespace EthornellEditor {
             byte[] StringTable = new byte[0];
             int[] offsets = new int[Strings.Length];
             for (int pos = 0; pos < strings.Length; pos++) {
+#if KEEP_UNCHANGED
+                if (strings[pos] == oriStrings[pos])
+                    continue;
+#endif
+
                 int ID = -1;
                 int Offset;
 
@@ -219,7 +232,12 @@ namespace EthornellEditor {
             insertArr(ref outfile, EditorSignature);
 
             //step 6 - Update offsets
-            for (int pos = 0; pos < offsets.Length; pos++) {
+            for (int pos = 0; pos < offsets.Length; pos++)
+            {
+#if KEEP_UNCHANGED
+                if (strings[pos] == oriStrings[pos])
+                    continue;
+#endif
                 int offsetPos = Strings[pos].OffsetPos;
                 int offset = offsets[pos];
                 overwriteBytes(ref outfile, genOffet(offset), offsetPos);

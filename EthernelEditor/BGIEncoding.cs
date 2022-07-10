@@ -33,13 +33,13 @@ namespace EthornellEditor
                 if (Byte == 0x7B || Byte == 0x7D)
                     Buffer.Add(Byte);
 
-                if ((Byte >= 0x81 && !IsLastByte && Data[i+1] < 0x40 && Data[i+1] > 0xAC) || Byte > 0x90 && !IsLastByte)
+                /*if ((Byte >= 0x81 && !IsLastByte && Data[i+1] < 0x40 && Data[i+1] > 0xAC) || Byte > 0x90 && !IsLastByte)
                 {
                     Decoded += BaseEncoding.GetString(Buffer.ToArray());
                     Decoded += "{" + string.Format("{0:X2}{1:X2}", Byte, Data[++i]) + "}";
                     Buffer.Clear();
                     continue;
-                }
+                }*/
 
                 if (IsMultiByte(Byte) && !IsLastByte)
                 {

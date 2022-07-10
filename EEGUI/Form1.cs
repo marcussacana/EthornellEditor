@@ -28,10 +28,7 @@ namespace EEGUI
             {
                 listBox1.Items.Clear();
                 script.Import(System.IO.File.ReadAllBytes(ofd.FileName));
-                foreach (string str in script.strings)
-                {
-                    listBox1.Items.Add(str);
-                }
+                listBox1.Items.AddRange(script.strings);
             }
         }
 
